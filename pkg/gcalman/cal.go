@@ -22,7 +22,7 @@ import (
 
 type GcalMan interface {
 	GetEvents(calId string)
-	CreateEvent(calId string, event *calendar.Event)
+	CreateEvent(calId string, event *calendar.Event) error
 	CreateCalEvent(calEvent *GcalEvent) *calendar.Event
 }
 
@@ -55,6 +55,8 @@ func Init(oauthToken string, accessToken string) GcalMan {
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		log.Fatalf("Unable to retrieve Calendar client: %v", err)
+	} else {
+		log.Println("Gcalman Sucessfully Initialized !")
 	}
 
 	return &gcalman{OauthToken: oauthToken, AccessToken: accessToken, CalServ: srv}
@@ -88,7 +90,7 @@ func (g *gcalman) GetEvents(calId string) {
 }
 
 // Create event in Google Calender, required to pass
-func (g *gcalman) CreateEvent(calId string, event *calendar.Event) {
+func (g *gcalman) CreateEvent(calId string, event *calendar.Event) error {
 
 	if calId == "" {
 		calId = "primary"
@@ -102,7 +104,9 @@ func (g *gcalman) CreateEvent(calId string, event *calendar.Event) {
 	} else {
 		fmt.Println("Create event success")
 	}
-	fmt.Println(res, res.HangoutLink, res.HtmlLink, res.Id)
+
+	log.Println(res, res.HangoutLink, res.HtmlLink, res.Id)
+	return err
 }
 
 func randomString(length int) string {
