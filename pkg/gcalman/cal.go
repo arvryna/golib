@@ -23,6 +23,7 @@ import (
 type GcalMan interface {
 	GetEvents(calId string)
 	CreateEvent(calId string, event *calendar.Event)
+	CreateCalEvent(calEvent *GcalEvent) *calendar.Event
 }
 
 type gcalman struct {
@@ -150,4 +151,47 @@ func saveToken(path string, token *oauth2.Token) {
 	}
 	defer f.Close()
 	json.NewEncoder(f).Encode(token)
+}
+
+type GcalEvent struct {
+	Title          string
+	Description    string
+	AttendeeEmails []string
+	Start          string
+	End            string
+	Location       string
+	SendRemainders bool
+}
+
+// Create Event Object in GoogelCalendar format.
+// Example Time format "2022-03-31T10:45:26.371Z"
+func (g *gcalman) CreateCalEvent(calEvent *GcalEvent) *calendar.Event {
+
+	startTime := &calendar.EventDateTime{
+		DateTime: calEvent.Start,
+	}
+
+	endTime := &calendar.EventDateTime{
+		DateTime: calEvent.End,
+	}
+
+	var attendees []*calendar.EventAttendee
+
+	for _, val := range calEvent.AttendeeEmails {
+		attendee := &calendar.EventAttendee{
+			Email: val,
+		}
+		attendees = append(attendees, attendee)
+	}
+	event := &calendar.Event{
+		Attendees:   attendees,
+		Summary:     calEvent.Title,
+		Description: calEvent.Description,
+		Start:       startTime,
+		End:         endTime,
+		Reminders: &calendar.EventReminders{
+			UseDefault: calEvent.SendRemainders,
+		},
+	}
+	return event
 }
