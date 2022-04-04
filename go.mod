@@ -1,4 +1,4 @@
-module github.com/arvpyrna/golib
+module github.com/arvryna/golib
 
 go 1.17
 
