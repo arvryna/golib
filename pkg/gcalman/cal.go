@@ -38,25 +38,30 @@ type GcalEvent struct {
 	Start          string
 	End            string
 	Location       string
-	// This sends adds an entry in the users's calendar and also sends email to the user's Inbox
+	// This sends a calendar invite email to user
 	SendInvite bool
 	// By setting this flag, the event will appear in the calender of user as "AcceptedEvent"
 	AcceptedEvent bool
 }
 
-// Oauth token must be ready in advance, it can be fetched from
-// Google developer console, more instructions in the docs
-// This function Generates Auth URL in STDOUT with instructions
-// Once AccessToken is provided as STDIN, it will be stored in the preferredAccessTokenPath
-// Once the tokens are saved to disk, we can Initialize this library using Init function
+/* Fetching Access Token
+*********************
+- Oauth token must be ready in advance, it needs to be fetched from Google developer console,
+  more instructions in the docs
+
+- This function Generates Auth URL in STDOUT with instructions
+- Once AccessToken is provided as STDIN, it will be stored in the provided preferredAccessTokenPath
+- Once the tokens are saved to disk, we can Initialize this library using Init function
+
+*/
 func GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) {
-	b, err := ioutil.ReadFile(authTokenPath)
+	file, err := ioutil.ReadFile(authTokenPath)
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, calendar.CalendarScope)
+	config, err := google.ConfigFromJSON(file, calendar.CalendarScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
@@ -70,15 +75,17 @@ func GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessToken
 		log.Fatalf("Unable to read authorization code: %v", err)
 	}
 
-	tok, err := config.Exchange(context.TODO(), authCode)
+	token, err := config.Exchange(context.TODO(), authCode)
 	if err != nil {
 		log.Fatalf("Unable to retrieve token from web: %v", err)
 	}
-	saveToken(preferredAccessTokenPath, tok)
+	saveToken(preferredAccessTokenPath, token)
 }
 
-// Params: File path of oauthtoken and accesstoken
-// Details about fetching the auth/access token is provided in the documentation
+/* Initialize GcalMan Object
+- Details about fetching the auth/access token is provided in the documentation
+- Params: File path of oauthtoken and accesstoken
+*/
 func Init(oauthToken string, accessToken string) GcalMan {
 	ctx := context.Background()
 	b, err := ioutil.ReadFile(oauthToken)
