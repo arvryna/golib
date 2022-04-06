@@ -3,7 +3,7 @@ Collections of various modules that i use in my go projects,
 
 `Note:` This lib is not ready for protection, tests aren't not written, might be unstable.
 
-## 1.  Gcalman[pkg/cal.go]
+## 1.  Gcalman[pkg/gcalman/cal.go]
 - A Wrapper over Google calendar SDK, Google calendar API is too much verbose for beginners, intention was to simplify it by writing a layer above it to meet simple use cases.
 - Install: `go get -u github.com/arvryna/golib/pkg/gcalman`
 
@@ -12,6 +12,8 @@ Usage:
 
 func main() {
 	gc := gcalman.Init("auth-token.json", "access-token.json")
+
+    // Fetching list of events in the primary calendar
 	gc.GetEvents("primary")
 
 	event := gcalman.GcalEvent{
@@ -25,9 +27,12 @@ func main() {
 		AcceptedEvent:  true,
 	}
 
+    // Create an Event in primary calendar
 	gc.CreateEvent("primary", gc.BuildCalEventObject(&event))
 
 }
 ```
 
 ## 2. FileUtils[In-progress]
+- List of utils
+- Install: `go get -u github.com/arvryna/golib/pkg/utils`

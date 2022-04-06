@@ -44,7 +44,8 @@ type GcalEvent struct {
 	AcceptedEvent bool
 }
 
-/* Fetching Access Token
+/*
+Fetching Access Token
 *********************
 - Oauth token must be ready in advance, it needs to be fetched from Google developer console,
   more instructions in the docs
