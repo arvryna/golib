@@ -72,6 +72,7 @@ func GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessToken
 		"authorization code: \n%v\n", authURL)
 
 	var authCode string
+	fmt.Printf("Paste the Token here: ")
 	if _, err := fmt.Scan(&authCode); err != nil {
 		log.Fatalf("Unable to read authorization code: %v", err)
 	}
