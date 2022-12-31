@@ -21,7 +21,6 @@ import (
 type GcalMan interface {
 	CreateEvent(calId string, event *calendar.Event) (*CreateEventResp, error)
 	BuildCalEventObject(calEvent *GcalEvent) *calendar.Event
-	GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) error
 	PrintEvents(calId string)
 }
 
@@ -65,7 +64,7 @@ Fetching Access Token
 
   - Once the tokens are saved to disk, we can Initialize this library using Init function
 */
-func (g *gcalman) GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) error {
+func GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) error {
 	file, err := ioutil.ReadFile(authTokenPath)
 	if err != nil {
 		return err
