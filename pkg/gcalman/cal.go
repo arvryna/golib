@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"time"
 
@@ -20,9 +19,9 @@ import (
 )
 
 type GcalMan interface {
-	GetEvents(calId string)
 	BuildCalEventObject(calEvent *GcalEvent) *calendar.Event
-	CreateEvent(calId string, event *calendar.Event) error
+	CreateEvent(calId string, event *calendar.Event) (*CreateEventResp, error)
+	PrintEvents(calId string)
 }
 
 type gcalman struct {
@@ -44,81 +43,93 @@ type GcalEvent struct {
 	AcceptedEvent bool
 }
 
+type CreateEventResp struct {
+	Id          string
+	HtmlLink    string
+	HangoutLink string
+}
+
 /*
 Fetching Access Token
 *********************
-- Oauth token must be ready in advance, it needs to be fetched from Google developer console,
-  more instructions in the docs
+  - Oauth token must be ready in advance, it needs to be fetched from Google developer console,
+    more instructions in the docs
 
 - This function Generates Auth URL in STDOUT with instructions
 - Once AccessToken is provided as STDIN, it will be stored in the provided preferredAccessTokenPath
 - Once the tokens are saved to disk, we can Initialize this library using Init function
-
 */
-func GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) {
+func GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) error {
 	file, err := ioutil.ReadFile(authTokenPath)
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		return err
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(file, calendar.CalendarScope)
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		return err
 	}
 
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
+	fmt.Printf("Go to the following link in your browser then type the "+"authorization code: \n%v\n", authURL)
 
 	var authCode string
 	fmt.Printf("Paste the Token here: ")
+
 	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code: %v", err)
+		return err
 	}
 
 	token, err := config.Exchange(context.TODO(), authCode)
+
 	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
+		return err
 	}
-	saveToken(preferredAccessTokenPath, token)
+
+	if err = saveToken(preferredAccessTokenPath, token); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-/* Initialize GcalMan Object
+/*
+Initialize GcalMan Object
+
 - Details about fetching the auth/access token is provided in the documentation
 - Params: File path of oauthtoken and accesstoken
 */
-func Init(oauthToken string, accessToken string) GcalMan {
+func Init(oauthToken string, accessToken string) (GcalMan, error) {
 	ctx := context.Background()
+
 	b, err := ioutil.ReadFile(oauthToken)
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		return nil, err
 	}
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(b, calendar.CalendarScope)
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		return nil, err
 	}
 
 	token, err := tokenFromFile(accessToken)
 	if err != nil {
-		log.Fatalf("Unable to read Token from file: %v", err)
+		return nil, err
 	}
 
 	client := config.Client(ctx, token)
 
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Fatalf("Unable to retrieve Calendar client: %v", err)
-	} else {
-		log.Println("Gcalman Sucessfully Initialized !")
+		return nil, err
 	}
 
-	return &gcalman{OauthToken: oauthToken, AccessToken: accessToken, CalServ: srv}
+	return &gcalman{OauthToken: oauthToken, AccessToken: accessToken, CalServ: srv}, nil
 }
 
 // Fetches event from Google calendar by default from primary calendar ID
-func (g *gcalman) GetEvents(calId string) {
+func (g *gcalman) PrintEvents(calId string) {
 
 	if calId == "" {
 		calId = "primary"
@@ -128,7 +139,7 @@ func (g *gcalman) GetEvents(calId string) {
 	events, err := g.CalServ.Events.List(calId).ShowDeleted(false).
 		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve next ten of the user's events: %v", err)
+		fmt.Println(err)
 	}
 	fmt.Println("Upcoming events:")
 	if len(events.Items) == 0 {
@@ -187,23 +198,28 @@ func (g *gcalman) BuildCalEventObject(calEvent *GcalEvent) *calendar.Event {
 }
 
 // Create event in Google Calender, required to pass
-func (g *gcalman) CreateEvent(calId string, event *calendar.Event) error {
+func (g *gcalman) CreateEvent(calId string, event *calendar.Event) (*CreateEventResp, error) {
+
+	eventDetails := &CreateEventResp{}
 
 	if calId == "" {
 		calId = "primary"
 	}
 
 	eventCall := g.CalServ.Events.Insert(calId, event)
+
 	eventCall.SendUpdates("all")
+
 	res, err := eventCall.ConferenceDataVersion(1).Do()
 	if err != nil {
-		log.Fatalf("Unable to create event. %v\n", err)
-	} else {
-		fmt.Println("Create event success")
+		return nil, err
 	}
 
-	log.Println(res, res.HangoutLink, res.HtmlLink, res.Id)
-	return err
+	eventDetails.Id = res.Id
+	eventDetails.HangoutLink = res.HangoutLink
+	eventDetails.HtmlLink = res.HtmlLink
+
+	return eventDetails, nil
 }
 
 // Retrieves a token from a local file.
@@ -213,18 +229,24 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 		return nil, err
 	}
 	defer f.Close()
+
 	tok := &oauth2.Token{}
 	err = json.NewDecoder(f).Decode(tok)
 	return tok, err
 }
 
 // Saves a token to a file path.
-func saveToken(path string, token *oauth2.Token) {
+func saveToken(path string, token *oauth2.Token) error {
 	fmt.Printf("Saving credential file to: %s\n", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		return err
 	}
 	defer f.Close()
-	json.NewEncoder(f).Encode(token)
+
+	if err = json.NewEncoder(f).Encode(token); err != nil {
+		return err
+	}
+
+	return nil
 }

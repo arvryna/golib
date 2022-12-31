@@ -1,7 +1,6 @@
 # golib
-Collections of various modules that i use in my go projects, 
 
-`Note:` This lib is not ready for protection, tests aren't not written, might be unstable.
+Collection of various modules that i use in my go projects, 
 
 ## 1.  Gcalman[pkg/gcalman/cal.go]
 - A Wrapper over Google calendar SDK, Google calendar API is too much verbose for beginners, intention was to simplify it by writing a layer above it to meet simple use cases.
@@ -34,5 +33,6 @@ func main() {
 ```
 
 ## 2. FileUtils[In-progress]
+
 - List of utils
 - Install: `go get -u github.com/arvryna/golib/pkg/utils`
