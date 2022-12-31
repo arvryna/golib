@@ -19,8 +19,9 @@ import (
 )
 
 type GcalMan interface {
-	BuildCalEventObject(calEvent *GcalEvent) *calendar.Event
 	CreateEvent(calId string, event *calendar.Event) (*CreateEventResp, error)
+	BuildCalEventObject(calEvent *GcalEvent) *calendar.Event
+	GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) error
 	PrintEvents(calId string)
 }
 
@@ -52,14 +53,19 @@ type CreateEventResp struct {
 /*
 Fetching Access Token
 *********************
-  - Oauth token must be ready in advance, it needs to be fetched from Google developer console,
-    more instructions in the docs
 
-- This function Generates Auth URL in STDOUT with instructions
-- Once AccessToken is provided as STDIN, it will be stored in the provided preferredAccessTokenPath
-- Once the tokens are saved to disk, we can Initialize this library using Init function
+  - Oauth token must be ready in advance, it needs to be fetched from Google developer console,
+    https://developers.google.com/calendar/api/quickstart/go
+
+  - Then you need to got "Enable API Wizard" to get your credentials, which you need to pass in authTokenPath
+
+  - This function Generates Auth URL in STDOUT with instructions
+
+  - Once AccessToken is provided as STDIN, it will be stored in the provided preferredAccessTokenPath
+
+  - Once the tokens are saved to disk, we can Initialize this library using Init function
 */
-func GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) error {
+func (g *gcalman) GenerateAccessTokenFromAuthToken(authTokenPath string, preferredAccessTokenPath string) error {
 	file, err := ioutil.ReadFile(authTokenPath)
 	if err != nil {
 		return err
